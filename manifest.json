@@ -1,0 +1,25 @@
+{
+  "name": "HEART MCI Screen",
+  "short_name": "MCI Screen",
+  "description": "SAGE-aligned MCI cognitive screening tool for the HEART Pro Bono PT Clinic",
+  "start_url": "/Heart-mci/",
+  "scope": "/Heart-mci/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0F4F7",
+  "theme_color": "#1B6B93",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
