@@ -25,7 +25,7 @@ canvas{touch-action:none}
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const{useState,useRef}=React;
+const{useState,useRef,useEffect}=React;
 const S={
   hdr:{background:"#1B6B93",color:"#fff",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 8px rgba(27,107,147,0.15)",position:"sticky",top:0,zIndex:10},
   main:{maxWidth:"720px",width:"100%",margin:"0 auto",padding:"24px"},
@@ -59,7 +59,6 @@ function DrawCanvas({width=360,height=360,pencilOnly=true}){
   const start=e=>{e.preventDefault();if(!ok(e))return;ref.current.setPointerCapture(e.pointerId);dr.current=true;last.current=pos(e);};
   const move=e=>{e.preventDefault();if(!dr.current||!ok(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
   const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
-  useEffect(()=>{const c=ref.current;if(!c)return;const block=e=>e.preventDefault();c.addEventListener('touchstart',block,{passive:false});c.addEventListener('touchmove',block,{passive:false});c.addEventListener('touchend',block,{passive:false});return()=>{c.removeEventListener('touchstart',block);c.removeEventListener('touchmove',block);c.removeEventListener('touchend',block);};},[]);
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button></div>
   <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
   <button onClick={()=>ref.current.getContext("2d").clearRect(0,0,width,height)} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
@@ -78,7 +77,6 @@ function TrailsDraw({pencilOnly=true}){
   const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
   const undo=()=>{if(history.current.length>0){const prev=history.current.pop();const ctx=ref.current.getContext("2d");ctx.putImageData(prev,0,0);setUndoCount(history.current.length);}};
   const clear=()=>{ref.current.getContext("2d").clearRect(0,0,W,H);history.current=[];setUndoCount(0);};
-  useEffect(()=>{const c=ref.current;if(!c)return;const block=e=>e.preventDefault();c.addEventListener('touchstart',block,{passive:false});c.addEventListener('touchmove',block,{passive:false});c.addEventListener('touchend',block,{passive:false});return()=>{c.removeEventListener('touchstart',block);c.removeEventListener('touchmove',block);c.removeEventListener('touchend',block);};},[]);
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button><button onClick={undo} disabled={history.current.length===0} style={{...S.tb(false),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px",opacity:history.current.length>0?1:0.4}}>↩️ Undo</button></div>
   <div style={{position:"relative",width:"100%",maxWidth:W+"px",aspectRatio:"4/3",margin:"0 auto",borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#F8FAFB",overflow:"hidden"}}>
     {TRAIL_SEQ.map((l,i)=><div key={i} style={{position:"absolute",left:TRAIL_POS[i].x+"%",top:TRAIL_POS[i].y+"%",transform:"translate(-50%,-50%)",width:"48px",height:"48px",borderRadius:"50%",border:"2.5px solid #1A2332",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"17px",fontWeight:700,zIndex:1,pointerEvents:"none"}}>{l}</div>)}
@@ -111,6 +109,7 @@ function MCIScreen({pid,clin,onHome,pencilOnly=true}){
   const idx=STEPS.indexOf(step);
   const set=(k,v)=>setSc(p=>({...p,[k]:v}));
   const setA=(k,i,v)=>setSc(p=>{const a=[...p[k]];a[i]=v;return{...p,[k]:a};});
+  useEffect(()=>{if(!pencilOnly)return;const block=e=>{let t=e.target;while(t){if(t.tagName==='CANVAS'){e.preventDefault();return;}t=t.parentElement;}};document.addEventListener('touchstart',block,{passive:false,capture:true});document.addEventListener('touchmove',block,{passive:false,capture:true});document.addEventListener('touchend',block,{passive:false,capture:true});return()=>{document.removeEventListener('touchstart',block,{capture:true});document.removeEventListener('touchmove',block,{capture:true});document.removeEventListener('touchend',block,{capture:true});};},[pencilOnly]);
   const next=()=>{if(STEPS[idx+1]){setStep(STEPS[idx+1]);window.scrollTo(0,0);}};
   const back=()=>{if(STEPS[idx-1]){setStep(STEPS[idx-1]);window.scrollTo(0,0);}};
   const calc=d=>{
