@@ -56,11 +56,12 @@ function DrawCanvas({width=360,height=360,pencilOnly=true}){
   const ref=useRef(null),dr=useRef(false),last=useRef(null),[mode,setMode]=useState("draw");
   const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
   const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(width/r.width),y:(e.clientY-r.top)*(height/r.height)};};
+  const block=e=>e.preventDefault();
   const start=e=>{e.preventDefault();if(!ok(e))return;ref.current.setPointerCapture(e.pointerId);dr.current=true;last.current=pos(e);};
   const move=e=>{e.preventDefault();if(!dr.current||!ok(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
   const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button></div>
-  <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
+  <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onTouchStart={block} onTouchMove={block} onTouchEnd={block} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
   <button onClick={()=>ref.current.getContext("2d").clearRect(0,0,width,height)} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
 }
 
@@ -80,7 +81,7 @@ function TrailsDraw({pencilOnly=true}){
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button><button onClick={undo} disabled={history.current.length===0} style={{...S.tb(false),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px",opacity:history.current.length>0?1:0.4}}>↩️ Undo</button></div>
   <div style={{position:"relative",width:"100%",maxWidth:W+"px",aspectRatio:"4/3",margin:"0 auto",borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#F8FAFB",overflow:"hidden"}}>
     {TRAIL_SEQ.map((l,i)=><div key={i} style={{position:"absolute",left:TRAIL_POS[i].x+"%",top:TRAIL_POS[i].y+"%",transform:"translate(-50%,-50%)",width:"48px",height:"48px",borderRadius:"50%",border:"2.5px solid #1A2332",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"17px",fontWeight:700,zIndex:1,pointerEvents:"none"}}>{l}</div>)}
-    <canvas ref={ref} width={W} height={H} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:2,touchAction:"none",background:"transparent"}} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
+    <canvas ref={ref} width={W} height={H} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:2,touchAction:"none",background:"transparent"}} onTouchStart={e=>e.preventDefault()} onTouchMove={e=>e.preventDefault()} onTouchEnd={e=>e.preventDefault()} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
   </div>
   <button onClick={clear} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
 }
