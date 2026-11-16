@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MCI Screen">
 <meta name="theme-color" content="#1B6B93">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>HEART MCI Screen</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -49,33 +51,35 @@ const TRAIL_POS=[{x:14,y:22},{x:52,y:8},{x:86,y:28},{x:28,y:52},{x:72,y:48},{x:8
 
 function Toggle({value,onChange,labels}){return<div style={S.tr}><button style={S.tb(value===1)} onClick={()=>onChange(1)}>{labels?.[0]||"Correct"}</button><button style={S.tb(value===0)} onClick={()=>onChange(0)}>{labels?.[1]||"Incorrect"}</button></div>;}
 
-function DrawCanvas({width=360,height=360}){
+function DrawCanvas({width=360,height=360,pencilOnly=true}){
   const ref=useRef(null),dr=useRef(false),last=useRef(null),[mode,setMode]=useState("draw");
-  const pos=e=>{const r=ref.current.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*(width/r.width),y:(t.clientY-r.top)*(height/r.height)};};
-  const start=e=>{e.preventDefault();dr.current=true;last.current=pos(e);};
-  const move=e=>{if(!dr.current)return;e.preventDefault();const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
-  const end=()=>{dr.current=false;last.current=null;};
+  const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
+  const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(width/r.width),y:(e.clientY-r.top)*(height/r.height)};};
+  const start=e=>{if(!ok(e))return;e.preventDefault();ref.current.setPointerCapture(e.pointerId);dr.current=true;last.current=pos(e);};
+  const move=e=>{if(!dr.current||!ok(e))return;e.preventDefault();const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
+  const end=e=>{if(ok(e)){dr.current=false;last.current=null;}};
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button></div>
-  <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={end} onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}/>
+  <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
   <button onClick={()=>ref.current.getContext("2d").clearRect(0,0,width,height)} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
 }
 
-function TrailsDraw(){
+function TrailsDraw({pencilOnly=true}){
   const ref=useRef(null),dr=useRef(false),last=useRef(null),history=useRef([]);
   const[mode,setMode]=useState("draw");
   const[undoCount,setUndoCount]=useState(0);
   const W=500,H=375;
+  const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
   const saveState=()=>{const ctx=ref.current.getContext("2d");history.current.push(ctx.getImageData(0,0,W,H));setUndoCount(history.current.length);};
-  const pos=e=>{const r=ref.current.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*(W/r.width),y:(t.clientY-r.top)*(H/r.height)};};
-  const start=e=>{e.preventDefault();saveState();dr.current=true;last.current=pos(e);};
-  const move=e=>{if(!dr.current)return;e.preventDefault();const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1B6B93";ctx.lineWidth=3.5;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
-  const end=()=>{dr.current=false;last.current=null;};
+  const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(W/r.width),y:(e.clientY-r.top)*(H/r.height)};};
+  const start=e=>{if(!ok(e))return;e.preventDefault();ref.current.setPointerCapture(e.pointerId);saveState();dr.current=true;last.current=pos(e);};
+  const move=e=>{if(!dr.current||!ok(e))return;e.preventDefault();const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1B6B93";ctx.lineWidth=3.5;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
+  const end=e=>{if(ok(e)){dr.current=false;last.current=null;}};
   const undo=()=>{if(history.current.length>0){const prev=history.current.pop();const ctx=ref.current.getContext("2d");ctx.putImageData(prev,0,0);setUndoCount(history.current.length);}};
   const clear=()=>{ref.current.getContext("2d").clearRect(0,0,W,H);history.current=[];setUndoCount(0);};
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button><button onClick={undo} disabled={history.current.length===0} style={{...S.tb(false),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px",opacity:history.current.length>0?1:0.4}}>↩️ Undo</button></div>
   <div style={{position:"relative",width:"100%",maxWidth:W+"px",aspectRatio:"4/3",margin:"0 auto",borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#F8FAFB",overflow:"hidden"}}>
     {TRAIL_SEQ.map((l,i)=><div key={i} style={{position:"absolute",left:TRAIL_POS[i].x+"%",top:TRAIL_POS[i].y+"%",transform:"translate(-50%,-50%)",width:"48px",height:"48px",borderRadius:"50%",border:"2.5px solid #1A2332",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"17px",fontWeight:700,zIndex:1,pointerEvents:"none"}}>{l}</div>)}
-    <canvas ref={ref} width={W} height={H} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:2,touchAction:"none",background:"transparent"}} onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={end} onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}/>
+    <canvas ref={ref} width={W} height={H} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:2,touchAction:"none",background:"transparent"}} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
   </div>
   <button onClick={clear} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
 }
@@ -98,7 +102,7 @@ const STEPS=["instruct","orient_pt","orient_sc","naming_pt","naming_sc","abstrac
 const DN={orient:"Orientation",naming:"Naming",abstract:"Abstraction",calc:"Calculations",trails:"Trail Making B",cube:"3D Figure Copy",clock:"Clock Drawing",fluency:"Verbal Fluency",prospect:"Prospective Memory"};
 const MX={orient:4,naming:2,abstract:2,calc:2,trails:2,cube:2,clock:2,fluency:2,prospect:2};
 
-function MCIScreen({pid,clin,onHome}){
+function MCIScreen({pid,clin,onHome,pencilOnly=true}){
   const[step,setStep]=useState(STEPS[0]);
   const[sc,setSc]=useState({orient:[null,null,null],naming:[null,null],abstract:null,calc:[null,null],trails:null,cube:null,clock:null,fluency:null,prospect:null});
   const idx=STEPS.indexOf(step);
@@ -139,21 +143,21 @@ function MCIScreen({pid,clin,onHome}){
         <div style={{marginBottom:"20px"}}><div style={{fontSize:"16px",fontWeight:600,marginBottom:"8px"}}>"You have $30 and spend $24.25. How much do you have left?"</div><Toggle value={sc.calc[0]} onChange={v=>setA("calc",0,v)}/></div>
         <div><div style={{fontSize:"16px",fontWeight:600,marginBottom:"8px"}}>"How many quarters are in $3.00?"</div><Toggle value={sc.calc[1]} onChange={v=>setA("calc",1,v)}/></div></div>}
 
-      {step==="trails_pt"&&<div style={S.card}><div style={S.lbl}>Trail Making B</div><div style={S.desc}>Draw a line connecting the circles in alternating order: 1, A, 2, B, 3, C, and so on.</div><TrailsDraw/></div>}
+      {step==="trails_pt"&&<div style={S.card}><div style={S.lbl}>Trail Making B</div><div style={S.desc}>Draw a line connecting the circles in alternating order: 1, A, 2, B, 3, C, and so on.</div><TrailsDraw pencilOnly={pencilOnly}/></div>}
       {step==="trails_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Trail Making B</div><div style={S.note}>Review the drawing. Score: 2 = correct sequence with no errors, 1 = 1-2 errors, 0 = 3+ errors or unable.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.trails===v)} onClick={()=>set("trails",v)}>{v}/2</button>)}</div></div>}
 
-      {step==="cube_pt"&&<div style={S.card}><div style={S.lbl}>3D Figure Copy</div><div style={S.desc}>Copy the figure shown below as accurately as you can.</div><div style={{marginBottom:"16px"}}><svg viewBox="0 0 200 180" width="180" height="160" style={{display:"block",margin:"0 auto"}}><path d="M60 50 L140 50 L140 130 L60 130 Z" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 50 L90 25 L170 25 L140 50" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M140 50 L170 25 L170 105 L140 130" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 130 L90 105 L170 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/><path d="M90 25 L90 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/></svg></div><DrawCanvas width={360} height={300}/></div>}
+      {step==="cube_pt"&&<div style={S.card}><div style={S.lbl}>3D Figure Copy</div><div style={S.desc}>Copy the figure shown below as accurately as you can.</div><div style={{marginBottom:"16px"}}><svg viewBox="0 0 200 180" width="180" height="160" style={{display:"block",margin:"0 auto"}}><path d="M60 50 L140 50 L140 130 L60 130 Z" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 50 L90 25 L170 25 L140 50" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M140 50 L170 25 L170 105 L140 130" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 130 L90 105 L170 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/><path d="M90 25 L90 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/></svg></div><DrawCanvas width={360} height={300} pencilOnly={pencilOnly}/></div>}
       {step==="cube_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - 3D Figure Copy</div>
         <div style={{marginBottom:"16px"}}><svg viewBox="0 0 200 180" width="160" height="140" style={{display:"block",margin:"0 auto"}}><path d="M60 50 L140 50 L140 130 L60 130 Z" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 50 L90 25 L170 25 L140 50" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M140 50 L170 25 L170 105 L140 130" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 130 L90 105 L170 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/><path d="M90 25 L90 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/></svg><div style={{textAlign:"center",fontSize:"13px",color:"#90A4AE",marginTop:"4px"}}>Reference figure shown to patient</div></div>
         <div style={S.note}>Score: 2 = 3D form with correct parallel lines, 1 = 3D attempt but lines off, 0 = all else.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.cube===v)} onClick={()=>set("cube",v)}>{v}/2</button>)}</div></div>}
 
-      {step==="clock_pt"&&<div style={S.card}><div style={S.lbl}>Clock Drawing</div><div style={S.desc}>Draw a clock face showing all the numbers. Set the time to 10 past 11.</div><DrawCanvas width={380} height={380}/></div>}
+      {step==="clock_pt"&&<div style={S.card}><div style={S.lbl}>Clock Drawing</div><div style={S.desc}>Draw a clock face showing all the numbers. Set the time to 10 past 11.</div><DrawCanvas width={380} height={380} pencilOnly={pencilOnly}/></div>}
       {step==="clock_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Clock Drawing</div><div style={S.note}>4 components: clock face, all 12 numbers in order, hand positions (correct time), hand size. Score: 2 = 4/4, 1 = 3/4 (must include hands), 0 = all else.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.clock===v)} onClick={()=>set("clock",v)}>{v}/2</button>)}</div></div>}
 
       {step==="fluency_pt"&&<div style={S.ptCard}><div style={S.ptText}>Name as many different animals as you can.<br/>Your examiner will tell you when to start and stop.</div></div>}
       {step==="fluency_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Verbal Fluency</div><div style={S.note}>Total unique animals in 60 seconds. Repetitions and non-animals don't count.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.fluency===v)} onClick={()=>set("fluency",v)}>{v===0?"≤ 9 (0)":v===1?"10-11 (1)":"12+ (2)"}</button>)}</div></div>}
 
-      {step==="prospect"&&<div style={S.card}><div style={{textAlign:"center",padding:"40px 20px 20px"}}><div style={{fontSize:"20px",fontWeight:600,marginBottom:"40px"}}>You have reached the end of the test.</div><DrawCanvas width={500} height={80}/><div style={{marginTop:"40px"}}><button style={{...S.bp,maxWidth:"320px",margin:"0 auto"}} onClick={next}>Complete Test</button></div></div></div>}
+      {step==="prospect"&&<div style={S.card}><div style={{textAlign:"center",padding:"40px 20px 20px"}}><div style={{fontSize:"20px",fontWeight:600,marginBottom:"40px"}}>You have reached the end of the test.</div><DrawCanvas width={500} height={80} pencilOnly={pencilOnly}/><div style={{marginTop:"40px"}}><button style={{...S.bp,maxWidth:"320px",margin:"0 auto"}} onClick={next}>Complete Test</button></div></div></div>}
 
       {step==="handoff"&&<div>
         <div style={{...S.card,textAlign:"center",padding:"48px 32px"}}><div style={{fontSize:"64px",marginBottom:"24px"}}>✅</div><div style={{fontSize:"26px",fontWeight:700,marginBottom:"16px"}}>Thank you for completing the screening.</div><div style={{fontSize:"18px",color:"#5A6B7D",lineHeight:1.6,maxWidth:"400px",margin:"0 auto 24px"}}>Please hand the device back to your examiner now.</div></div>
@@ -168,7 +172,7 @@ function MCIScreen({pid,clin,onHome}){
 }
 
 function App(){
-  const[scr,setScr]=useState("setup"),[pid,setPid]=useState(""),[clin,setClin]=useState("");
+  const[scr,setScr]=useState("setup"),[pid,setPid]=useState(""),[clin,setClin]=useState(""),[pencilOnly,setPencilOnly]=useState(true);
   if(scr==="ack")return<div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}><div style={S.hdr}><div><div style={{fontSize:"20px",fontWeight:700}}>MCI Screen</div><div style={{fontSize:"13px",opacity:.85}}>Acknowledgements</div></div></div>
   <div style={S.main}><div style={S.card}>
     <div style={S.ttl}>Acknowledgements</div>
@@ -184,16 +188,18 @@ function App(){
     <button style={{...S.bp,marginTop:"20px"}} onClick={()=>setScr("setup")}>Back</button>
   </div></div></div>;
 
-  if(scr==="test")return<MCIScreen pid={pid} clin={clin} onHome={()=>{setScr("setup");setPid("");setClin("");window.scrollTo(0,0);}}/>;
+  if(scr==="test")return<MCIScreen pid={pid} clin={clin} pencilOnly={pencilOnly} onHome={()=>{setScr("setup");setPid("");setClin("");window.scrollTo(0,0);}}/>;
   const today=new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
   return<div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}><div style={S.hdr}><div><div style={{fontSize:"20px",fontWeight:700}}>MCI Screen</div><div style={{fontSize:"13px",opacity:.85}}>SAGE-Aligned</div></div></div>
   <div style={S.main}><div style={S.card}><div style={S.lbl}>Patient Setup</div><div style={S.ttl}>New Screening</div><div style={S.desc}>SAGE-aligned MCI screening. 9 domains, 20 points. ~6 min.</div>
   <div style={S.iR}><label style={S.iL}>Date</label><div style={{...S.inp,background:"#F0F4F7",color:"#5A6B7D"}}>{today}</div></div>
   <div style={S.iR}><label style={S.iL}>Patient ID or Initials</label><input style={S.inp} value={pid} onChange={e=>setPid(e.target.value)} placeholder="e.g. JD or 0042"/></div>
   <div style={S.iR}><label style={S.iL}>Clinician / Student Name</label><input style={S.inp} value={clin} onChange={e=>setClin(e.target.value)} placeholder="Your name"/></div>
+  <div style={S.iR}><label style={S.iL}>Input Mode</label><div style={{display:"flex",gap:"8px"}}><button onClick={()=>setPencilOnly(true)} style={{...S.tb(pencilOnly),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Apple Pencil Only</button><button onClick={()=>setPencilOnly(false)} style={{...S.tb(!pencilOnly),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>👆 Finger + Pencil</button></div><div style={{fontSize:"12px",color:"#90A4AE",marginTop:"4px"}}>Pencil Only mode prevents palm marks on drawing areas</div></div>
   <button style={{...S.bp,marginTop:"12px",opacity:pid&&clin?1:.5}} disabled={!pid||!clin} onClick={()=>{setScr("test");window.scrollTo(0,0);}}>Begin Screening</button><div style={{marginTop:"24px",textAlign:"center"}}><button onClick={()=>setScr("ack")} style={{background:"none",border:"none",color:"#90A4AE",fontSize:"13px",cursor:"pointer",textDecoration:"underline"}}>Acknowledgements</button></div></div></div></div>;
 }
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}</script>
 </body>
 </html>
