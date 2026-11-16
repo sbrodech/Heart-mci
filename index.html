@@ -54,11 +54,12 @@ function Toggle({value,onChange,labels}){return<div style={S.tr}><button style={
 
 function DrawCanvas({width=360,height=360,pencilOnly=true}){
   const ref=useRef(null),dr=useRef(false),last=useRef(null),[mode,setMode]=useState("draw");
-  const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
+  const isPen=e=>e.pointerType==="pen"||e.pointerType==="mouse";
+  const canDraw=e=>!pencilOnly||isPen(e);
   const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(width/r.width),y:(e.clientY-r.top)*(height/r.height)};};
-  const start=e=>{e.preventDefault();if(!ok(e))return;ref.current.setPointerCapture(e.pointerId);dr.current=true;last.current=pos(e);};
-  const move=e=>{e.preventDefault();if(!dr.current||!ok(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
-  const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
+  const start=e=>{e.preventDefault();ref.current.setPointerCapture(e.pointerId);if(!canDraw(e))return;dr.current=true;last.current=pos(e);};
+  const move=e=>{e.preventDefault();if(!dr.current||!canDraw(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
+  const end=e=>{e.preventDefault();if(canDraw(e)){dr.current=false;last.current=null;}};
   useEffect(()=>{const c=ref.current;if(!c)return;const block=e=>e.preventDefault();c.addEventListener('touchstart',block,{passive:false});c.addEventListener('touchmove',block,{passive:false});c.addEventListener('touchend',block,{passive:false});return()=>{c.removeEventListener('touchstart',block);c.removeEventListener('touchmove',block);c.removeEventListener('touchend',block);};},[]);
   return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button></div>
   <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
@@ -70,12 +71,13 @@ function TrailsDraw({pencilOnly=true}){
   const[mode,setMode]=useState("draw");
   const[undoCount,setUndoCount]=useState(0);
   const W=500,H=375;
-  const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
+  const isPen=e=>e.pointerType==="pen"||e.pointerType==="mouse";
+  const canDraw=e=>!pencilOnly||isPen(e);
   const saveState=()=>{const ctx=ref.current.getContext("2d");history.current.push(ctx.getImageData(0,0,W,H));setUndoCount(history.current.length);};
   const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(W/r.width),y:(e.clientY-r.top)*(H/r.height)};};
-  const start=e=>{e.preventDefault();if(!ok(e))return;ref.current.setPointerCapture(e.pointerId);saveState();dr.current=true;last.current=pos(e);};
-  const move=e=>{e.preventDefault();if(!dr.current||!ok(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1B6B93";ctx.lineWidth=3.5;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
-  const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
+  const start=e=>{e.preventDefault();ref.current.setPointerCapture(e.pointerId);if(!canDraw(e))return;saveState();dr.current=true;last.current=pos(e);};
+  const move=e=>{e.preventDefault();if(!dr.current||!canDraw(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1B6B93";ctx.lineWidth=3.5;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
+  const end=e=>{e.preventDefault();if(canDraw(e)){dr.current=false;last.current=null;}};
   const undo=()=>{if(history.current.length>0){const prev=history.current.pop();const ctx=ref.current.getContext("2d");ctx.putImageData(prev,0,0);setUndoCount(history.current.length);}};
   const clear=()=>{ref.current.getContext("2d").clearRect(0,0,W,H);history.current=[];setUndoCount(0);};
   useEffect(()=>{const c=ref.current;if(!c)return;const block=e=>e.preventDefault();c.addEventListener('touchstart',block,{passive:false});c.addEventListener('touchmove',block,{passive:false});c.addEventListener('touchend',block,{passive:false});return()=>{c.removeEventListener('touchstart',block);c.removeEventListener('touchmove',block);c.removeEventListener('touchend',block);};},[]);
@@ -161,233 +163,6 @@ function MCIScreen({pid,clin,onHome,pencilOnly=true}){
       {step==="fluency_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Verbal Fluency</div><div style={S.note}>Total unique animals in 60 seconds. Repetitions and non-animals don't count.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.fluency===v)} onClick={()=>set("fluency",v)}>{v===0?"≤ 9 (0)":v===1?"10-11 (1)":"12+ (2)"}</button>)}</div></div>}
 
       {step==="prospect"&&<div style={S.card}><div style={{textAlign:"center",padding:"40px 20px 20px"}}><div style={{fontSize:"20px",fontWeight:600,marginBottom:"40px"}}>You have reached the end of the test.</div><DrawCanvas width={500} height={200} pencilOnly={pencilOnly}/><div style={{marginTop:"40px"}}><button style={{...S.bp,maxWidth:"320px",margin:"0 auto"}} onClick={next}>Complete Test</button></div></div></div>}
-
-      {step==="handoff"&&<div>
-        <div style={{...S.card,textAlign:"center",padding:"48px 32px"}}><div style={{fontSize:"64px",marginBottom:"24px"}}>✅</div><div style={{fontSize:"26px",fontWeight:700,marginBottom:"16px"}}>Thank you for completing the screening.</div><div style={{fontSize:"18px",color:"#5A6B7D",lineHeight:1.6,maxWidth:"400px",margin:"0 auto 24px"}}>Please hand the device back to your examiner now.</div></div>
-        <div style={{...S.card,marginTop:"-8px"}}><div style={S.badge}>Clinician Scoring - Prospective Memory</div><div style={S.note}>Did the patient draw a circle on the line? Score: 2 = drew a circle, 1 = drew something else, 0 = forgot entirely.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.prospect===v)} onClick={()=>set("prospect",v)}>{v===2?"Drew circle (2)":v===1?"Drew something (1)":"Forgot (0)"}</button>)}</div><button style={{...S.bp,marginTop:"16px"}} onClick={next}>View Results</button></div>
-      </div>}
-
-      {step==="results"&&<Results pid={pid} clin={clin} domains={DN} calc={calc} max={MX}
-        onRestart={()=>{setStep(STEPS[0]);setSc({orient:[null,null,null],naming:[null,null],abstract:null,calc:[null,null],trails:null,cube:null,clock:null,fluency:null,prospect:null});window.scrollTo(0,0);}} onHome={onHome}/>}
-    </div>
-    {showFt&&<div style={S.ft}><button style={S.bs} onClick={idx===0?onHome:back}>{idx===0?"Home":"Back"}</button><button style={{...S.bp,width:"auto",flex:1}} onClick={next}>Next</button></div>}
-  </div>;
-}
-
-function App(){
-  const[scr,setScr]=useState("setup"),[pid,setPid]=useState(""),[clin,setClin]=useState(""),[pencilOnly,setPencilOnly]=useState(true);
-  if(scr==="ack")return<div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}><div style={S.hdr}><div><div style={{fontSize:"20px",fontWeight:700}}>MCI Screen</div><div style={{fontSize:"13px",opacity:.85}}>Acknowledgements</div></div></div>
-  <div style={S.main}><div style={S.card}>
-    <div style={S.ttl}>Acknowledgements</div>
-    <div style={{fontSize:"14px",lineHeight:1.8,color:"#5A6B7D"}}>
-      <p style={{marginBottom:"16px"}}>This screening tool was developed as a student project at the HEART Pro Bono PT Clinic, University of Michigan-Flint. It is intended as a concept prototype and is not a validated diagnostic instrument.</p>
-      <p style={{marginBottom:"12px",fontWeight:600,color:"#1A2332"}}>The following established assessments informed the design of this tool:</p>
-      <p style={{marginBottom:"10px"}}><strong>Self-Administered Gerocognitive Examination (SAGE)</strong><br/>Scharre DW, Chang SI, Murden RA, et al. <em>Alzheimer Dis Assoc Disord.</em> 2010;24(1):64-71. Ohio State University Wexner Medical Center.</p>
-      <p style={{marginBottom:"10px"}}><strong>Trail Making Test</strong><br/>Reitan RM. <em>Perceptual and Motor Skills.</em> 1958;8:271-276.</p>
-      <p style={{marginBottom:"10px"}}><strong>Clock Drawing Test</strong><br/>Shulman KI. <em>Int J Geriatr Psychiatry.</em> 2000;15(6):548-561.</p>
-      <p style={{marginBottom:"10px"}}><strong>Verbal Fluency</strong><br/>Lezak MD, Howieson DB, Loring DW. <em>Neuropsychological Assessment.</em> 5th ed. Oxford University Press; 2012.</p>
-      <p style={{marginBottom:"10px"}}><strong>Cube Copy</strong><br/>Adapted from the Montreal Cognitive Assessment (MoCA). Nasreddine ZS, et al. <em>J Am Geriatr Soc.</em> 2005;53(4):695-699.</p>
-    </div>
-    <button style={{...S.bp,marginTop:"20px"}} onClick={()=>setScr("setup")}>Back</button>
-  </div></div></div>;
-
-  if(scr==="test")return<MCIScreen pid={pid} clin={clin} pencilOnly={pencilOnly} onHome={()=>{setScr("setup");setPid("");setClin("");window.scrollTo(0,0);}}/>;
-  const today=new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
-  return<div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}><div style={S.hdr}><div><div style={{fontSize:"20px",fontWeight:700}}>MCI Screen</div><div style={{fontSize:"13px",opacity:.85}}>SAGE-Aligned</div></div></div>
-  <div style={S.main}><div style={S.card}><div style={S.lbl}>Patient Setup</div><div style={S.ttl}>New Screening</div><div style={S.desc}>SAGE-aligned MCI screening. 9 domains, 20 points. ~6 min.</div>
-  <div style={S.iR}><label style={S.iL}>Date</label><div style={{...S.inp,background:"#F0F4F7",color:"#5A6B7D"}}>{today}</div></div>
-  <div style={S.iR}><label style={S.iL}>Patient ID or Initials</label><input style={S.inp} value={pid} onChange={e=>setPid(e.target.value)} placeholder="e.g. JD or 0042"/></div>
-  <div style={S.iR}><label style={S.iL}>Clinician / Student Name</label><input style={S.inp} value={clin} onChange={e=>setClin(e.target.value)} placeholder="Your name"/></div>
-  <div style={S.iR}><label style={S.iL}>Input Mode</label><div style={{display:"flex",gap:"8px"}}><button onClick={()=>setPencilOnly(true)} style={{...S.tb(pencilOnly),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Apple Pencil Only</button><button onClick={()=>setPencilOnly(false)} style={{...S.tb(!pencilOnly),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>👆 Finger + Pencil</button></div><div style={{fontSize:"12px",color:"#90A4AE",marginTop:"4px"}}>Pencil Only mode prevents palm marks on drawing areas</div></div>
-  <button style={{...S.bp,marginTop:"12px",opacity:pid&&clin?1:.5}} disabled={!pid||!clin} onClick={()=>{setScr("test");window.scrollTo(0,0);}}>Begin Screening</button><div style={{marginTop:"24px",textAlign:"center"}}><button onClick={()=>setScr("ack")} style={{background:"none",border:"none",color:"#90A4AE",fontSize:"13px",cursor:"pointer",textDecoration:"underline"}}>Acknowledgements</button></div></div></div></div>;
-}
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-</script>
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(reg=>{
-    // Check for updates every 60 seconds while app is open
-    setInterval(()=>reg.update(),60000);
-    // If a new SW is already waiting, reload
-    if(reg.waiting){location.reload();}
-    // Watch for new SW installing
-    reg.addEventListener('updatefound',()=>{
-      const nw=reg.installing;
-      if(nw){nw.addEventListener('statechange',()=>{
-        if(nw.state==='installed'&&navigator.serviceWorker.controller){location.reload();}
-      });}
-    });
-  }).catch(()=>{});
-  // If the active SW sends an update message, reload
-  navigator.serviceWorker.addEventListener('message',e=>{
-    if(e.data&&e.data.type==='SW_UPDATED'){location.reload();}
-  });
-}
-</script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MCI Screen">
-<meta name="theme-color" content="#1B6B93">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>HEART MCI Screen</title>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-html,body,#root{height:100%;width:100%;overflow-x:hidden}
-body{font-family:-apple-system,"SF Pro Display",system-ui,sans-serif;background:#F0F4F7;color:#1A2332;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;touch-action:manipulation;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
-input,button,textarea{font-family:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-input{-webkit-user-select:text;user-select:text}
-canvas{touch-action:none}
-</style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.10/babel.min.js"></script>
-</head>
-<body>
-<div id="root"></div>
-<script type="text/babel">
-const{useState,useRef}=React;
-const S={
-  hdr:{background:"#1B6B93",color:"#fff",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 8px rgba(27,107,147,0.15)",position:"sticky",top:0,zIndex:10},
-  main:{maxWidth:"720px",width:"100%",margin:"0 auto",padding:"24px"},
-  card:{background:"#fff",borderRadius:"16px",padding:"28px",boxShadow:"0 1px 4px rgba(0,0,0,.06)",marginBottom:"16px"},
-  lbl:{fontSize:"12px",fontWeight:700,textTransform:"uppercase",letterSpacing:"1.5px",color:"#1B6B93",marginBottom:"8px"},
-  ttl:{fontSize:"26px",fontWeight:700,letterSpacing:"-0.5px",marginBottom:"8px"},
-  desc:{fontSize:"15px",lineHeight:1.6,color:"#5A6B7D",marginBottom:"24px"},
-  note:{background:"#FFF8E1",border:"1px solid #FFE082",borderRadius:"10px",padding:"14px 18px",fontSize:"14px",lineHeight:1.5,color:"#5D4037",marginBottom:"20px"},
-  inp:{width:"100%",padding:"16px",border:"2px solid #E0E7ED",borderRadius:"10px",fontSize:"16px",outline:"none",boxSizing:"border-box",WebkitAppearance:"none"},
-  iR:{marginBottom:"16px"},iL:{fontSize:"13px",fontWeight:600,color:"#5A6B7D",marginBottom:"6px",display:"block"},
-  bp:{background:"#1B6B93",color:"#fff",border:"none",borderRadius:"12px",padding:"18px 32px",fontSize:"17px",fontWeight:600,cursor:"pointer",width:"100%",minHeight:"54px"},
-  bs:{background:"transparent",color:"#1B6B93",border:"2px solid #1B6B93",borderRadius:"12px",padding:"16px 24px",fontSize:"16px",fontWeight:600,cursor:"pointer",minHeight:"54px"},
-  tr:{display:"flex",gap:"10px",marginBottom:"12px"},
-  tb:a=>({flex:1,padding:"16px",border:`2px solid ${a?"#1B6B93":"#E0E7ED"}`,borderRadius:"10px",background:a?"#E8F4F8":"#fff",color:a?"#1B6B93":"#5A6B7D",fontSize:"16px",fontWeight:600,cursor:"pointer",textAlign:"center",minHeight:"52px"}),
-  sc:c=>({display:"inline-block",padding:"4px 12px",borderRadius:"20px",fontSize:"13px",fontWeight:700,background:c==="g"?"#E8F5E9":c==="y"?"#FFF8E1":"#FFEBEE",color:c==="g"?"#2E7D32":c==="y"?"#F57F17":"#C62828"}),
-  dr:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:"1px solid #F0F4F7"},
-  ft:{padding:"16px 24px",display:"flex",gap:"12px",justifyContent:"space-between",maxWidth:"720px",width:"100%",margin:"0 auto",boxSizing:"border-box",paddingBottom:"calc(16px + env(safe-area-inset-bottom))"},
-  ptCard:{background:"#fff",borderRadius:"16px",padding:"48px 28px",boxShadow:"0 1px 4px rgba(0,0,0,.06)",marginBottom:"16px",textAlign:"center"},
-  ptText:{fontSize:"20px",fontWeight:500,color:"#1A2332",lineHeight:1.6},
-  badge:{background:"#E8F4F8",border:"1px solid #B3D9E8",borderRadius:"8px",padding:"8px 14px",fontSize:"12px",fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"#1B6B93",display:"inline-block",marginBottom:"16px"},
-};
-const TRAIL_SEQ=["1","A","2","B","3","C","4","D","5","E","6","F"];
-const TRAIL_POS=[{x:14,y:22},{x:52,y:8},{x:86,y:28},{x:28,y:52},{x:72,y:48},{x:8,y:74},{x:48,y:78},{x:86,y:68},{x:22,y:92},{x:58,y:92},{x:88,y:90},{x:42,y:42}];
-
-function Toggle({value,onChange,labels}){return<div style={S.tr}><button style={S.tb(value===1)} onClick={()=>onChange(1)}>{labels?.[0]||"Correct"}</button><button style={S.tb(value===0)} onClick={()=>onChange(0)}>{labels?.[1]||"Incorrect"}</button></div>;}
-
-function DrawCanvas({width=360,height=360,pencilOnly=true}){
-  const ref=useRef(null),dr=useRef(false),last=useRef(null),[mode,setMode]=useState("draw");
-  const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
-  const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(width/r.width),y:(e.clientY-r.top)*(height/r.height)};};
-  const block=e=>e.preventDefault();
-  const start=e=>{e.preventDefault();if(!ok(e))return;ref.current.setPointerCapture(e.pointerId);dr.current=true;last.current=pos(e);};
-  const move=e=>{e.preventDefault();if(!dr.current||!ok(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1A2332";ctx.lineWidth=3;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
-  const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
-  return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button></div>
-  <canvas ref={ref} width={width} height={height} style={{width:"100%",maxWidth:width+"px",aspectRatio:`${width}/${height}`,borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#fff",display:"block",margin:"0 auto",touchAction:"none"}} onTouchStart={block} onTouchMove={block} onTouchEnd={block} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
-  <button onClick={()=>ref.current.getContext("2d").clearRect(0,0,width,height)} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
-}
-
-function TrailsDraw({pencilOnly=true}){
-  const ref=useRef(null),dr=useRef(false),last=useRef(null),history=useRef([]);
-  const[mode,setMode]=useState("draw");
-  const[undoCount,setUndoCount]=useState(0);
-  const W=500,H=375;
-  const ok=e=>!pencilOnly||e.pointerType==="pen"||e.pointerType==="mouse";
-  const saveState=()=>{const ctx=ref.current.getContext("2d");history.current.push(ctx.getImageData(0,0,W,H));setUndoCount(history.current.length);};
-  const pos=e=>{const r=ref.current.getBoundingClientRect();return{x:(e.clientX-r.left)*(W/r.width),y:(e.clientY-r.top)*(H/r.height)};};
-  const start=e=>{e.preventDefault();if(!ok(e))return;ref.current.setPointerCapture(e.pointerId);saveState();dr.current=true;last.current=pos(e);};
-  const move=e=>{e.preventDefault();if(!dr.current||!ok(e))return;const ctx=ref.current.getContext("2d"),p=pos(e);ctx.beginPath();ctx.moveTo(last.current.x,last.current.y);ctx.lineTo(p.x,p.y);if(mode==="erase"){ctx.globalCompositeOperation="destination-out";ctx.lineWidth=28;}else{ctx.globalCompositeOperation="source-over";ctx.strokeStyle="#1B6B93";ctx.lineWidth=3.5;}ctx.lineCap="round";ctx.lineJoin="round";ctx.stroke();ctx.globalCompositeOperation="source-over";last.current=p;};
-  const end=e=>{e.preventDefault();if(ok(e)){dr.current=false;last.current=null;}};
-  const undo=()=>{if(history.current.length>0){const prev=history.current.pop();const ctx=ref.current.getContext("2d");ctx.putImageData(prev,0,0);setUndoCount(history.current.length);}};
-  const clear=()=>{ref.current.getContext("2d").clearRect(0,0,W,H);history.current=[];setUndoCount(0);};
-  return<div><div style={{display:"flex",gap:"8px",marginBottom:"10px"}}><button onClick={()=>setMode("draw")} style={{...S.tb(mode==="draw"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>✏️ Draw</button><button onClick={()=>setMode("erase")} style={{...S.tb(mode==="erase"),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px"}}>🧹 Erase</button><button onClick={undo} disabled={history.current.length===0} style={{...S.tb(false),flex:1,minHeight:"44px",padding:"10px",fontSize:"14px",opacity:history.current.length>0?1:0.4}}>↩️ Undo</button></div>
-  <div style={{position:"relative",width:"100%",maxWidth:W+"px",aspectRatio:"4/3",margin:"0 auto",borderRadius:"12px",border:`2px solid ${mode==="erase"?"#FF9800":"#E0E7ED"}`,background:"#F8FAFB",overflow:"hidden"}}>
-    {TRAIL_SEQ.map((l,i)=><div key={i} style={{position:"absolute",left:TRAIL_POS[i].x+"%",top:TRAIL_POS[i].y+"%",transform:"translate(-50%,-50%)",width:"48px",height:"48px",borderRadius:"50%",border:"2.5px solid #1A2332",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"17px",fontWeight:700,zIndex:1,pointerEvents:"none"}}>{l}</div>)}
-    <canvas ref={ref} width={W} height={H} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:2,touchAction:"none",background:"transparent"}} onTouchStart={e=>e.preventDefault()} onTouchMove={e=>e.preventDefault()} onTouchEnd={e=>e.preventDefault()} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}/>
-  </div>
-  <button onClick={clear} style={{...S.bs,width:"100%",marginTop:"10px",padding:"10px",minHeight:"44px",fontSize:"14px"}}>Clear All</button></div>;
-}
-
-function Results({pid,clin,domains,calc,max,onRestart,onHome}){
-  const total=Object.keys(max).reduce((a,d)=>a+calc(d),0),mx=Object.values(max).reduce((a,b)=>a+b,0),pct=Math.round((total/mx)*100);
-  const lv=pct>=80?"Within normal limits":pct>=55?"Mild impairment":pct>=35?"Moderate impairment":"Severe impairment";
-  const lc=pct>=80?"#2E7D32":pct>=55?"#F57F17":pct>=35?"#E65100":"#C62828";
-  const gc=(s,m)=>{const p=s/m;return p>=.8?"g":p>=.5?"y":"r";};
-  const fl=Object.keys(max).filter(d=>calc(d)/max[d]<0.5);
-  return<><div style={S.card}><div style={S.lbl}>MCI Screen - Complete</div><div style={S.ttl}>Results Summary</div>
-  <div style={{display:"flex",justifyContent:"space-between",fontSize:"14px",color:"#5A6B7D",marginBottom:"20px",flexWrap:"wrap",gap:"8px"}}><span>Patient: {pid}</span><span>Clinician: {clin}</span><span>{new Date().toLocaleDateString()}</span></div>
-  <div style={{textAlign:"center",padding:"24px",background:"#F8FAFB",borderRadius:"12px",marginBottom:"24px"}}><div style={{fontSize:"56px",fontWeight:700,color:lc}}>{total}</div><div style={{fontSize:"16px",color:"#5A6B7D"}}>out of {mx}</div><div style={{marginTop:"8px",fontSize:"16px",fontWeight:600,color:lc}}>{lv}</div><div style={{marginTop:"4px",fontSize:"12px",color:"#90A4AE"}}>Screening tool only. Not diagnostic.</div></div>
-  {Object.keys(max).map(d=>{const s=calc(d),m=max[d],c=gc(s,m);return<div key={d} style={S.dr}><div style={{fontSize:"15px",fontWeight:600}}>{domains[d]}</div><div style={{display:"flex",alignItems:"center",gap:"12px"}}><div style={{width:"80px",height:"6px",borderRadius:"3px",background:"#E0E7ED",overflow:"hidden"}}><div style={{height:"100%",borderRadius:"3px",width:`${(s/m)*100}%`,background:c==="g"?"#4CAF50":c==="y"?"#FFB300":"#E53935"}}/></div><span style={S.sc(c)}>{s}/{m}</span></div></div>;})}
-  {fl.length>0&&<div style={{background:"#FFF3E0",border:"1px solid #FFE0B2",borderRadius:"10px",padding:"16px",marginTop:"16px"}}><div style={{fontSize:"14px",fontWeight:700,color:"#E65100",marginBottom:"6px"}}>Flagged Domains</div><div style={{fontSize:"14px",color:"#5D4037",lineHeight:1.6}}>{fl.map(d=>domains[d]).join(", ")}.</div></div>}
-  </div><div style={{display:"flex",gap:"12px",paddingBottom:"32px"}}><button style={S.bs} onClick={onHome}>Home</button><button style={{...S.bp,flex:1}} onClick={onRestart}>New Screening</button></div></>;
-}
-
-const STEPS=["instruct","orient_pt","orient_sc","naming_pt","naming_sc","abstract_pt","abstract_sc","calc_pt","calc_sc","trails_pt","trails_sc","cube_pt","cube_sc","clock_pt","clock_sc","fluency_pt","fluency_sc","prospect","handoff","results"];
-const DN={orient:"Orientation",naming:"Naming",abstract:"Abstraction",calc:"Calculations",trails:"Trail Making B",cube:"3D Figure Copy",clock:"Clock Drawing",fluency:"Verbal Fluency",prospect:"Prospective Memory"};
-const MX={orient:4,naming:2,abstract:2,calc:2,trails:2,cube:2,clock:2,fluency:2,prospect:2};
-
-function MCIScreen({pid,clin,onHome,pencilOnly=true}){
-  const[step,setStep]=useState(STEPS[0]);
-  const[sc,setSc]=useState({orient:[null,null,null],naming:[null,null],abstract:null,calc:[null,null],trails:null,cube:null,clock:null,fluency:null,prospect:null});
-  const idx=STEPS.indexOf(step);
-  const set=(k,v)=>setSc(p=>({...p,[k]:v}));
-  const setA=(k,i,v)=>setSc(p=>{const a=[...p[k]];a[i]=v;return{...p,[k]:a};});
-  const next=()=>{if(STEPS[idx+1]){setStep(STEPS[idx+1]);window.scrollTo(0,0);}};
-  const back=()=>{if(STEPS[idx-1]){setStep(STEPS[idx-1]);window.scrollTo(0,0);}};
-  const calc=d=>{
-    if(d==="orient"){const o=sc.orient;return(o[0]??0)+(o[1]===2?2:o[1]===1?1:0)+(o[2]??0);}
-    if(d==="naming")return sc.naming.filter(v=>v===1).length;
-    if(d==="abstract")return sc.abstract??0;if(d==="calc")return sc.calc.filter(v=>v===1).length;
-    if(d==="trails")return sc.trails??0;if(d==="cube")return sc.cube??0;if(d==="clock")return sc.clock??0;
-    if(d==="fluency")return sc.fluency??0;if(d==="prospect")return sc.prospect??0;return 0;};
-  const isSc=step.endsWith("_sc");const dk=step.replace(/_pt|_sc/g,"");
-  const showFt=step!=="handoff"&&step!=="results"&&step!=="prospect";
-  return<div style={{display:"flex",flexDirection:"column",minHeight:"100vh"}}>
-    <div style={S.hdr}><div><div style={{fontSize:"20px",fontWeight:700}}>MCI Screen</div><div style={{fontSize:"13px",opacity:.85}}>{step==="handoff"?"Clinician Scoring":step==="results"?"Results":step==="prospect"?"End of Test":step==="instruct"?"Instructions":isSc?"Clinician Scoring":DN[dk]||""}</div></div></div>
-    <div style={S.main}>
-      {step==="instruct"&&<div style={S.ptCard}><div style={{fontSize:"18px",fontWeight:600,color:"#1A2332",lineHeight:1.7}}>When you get to the last page, draw a circle on the line.</div></div>}
-      {step==="orient_pt"&&<div style={S.ptCard}><div style={S.ptText}>Your examiner will ask you a few questions.<br/>Please answer to the best of your ability.</div></div>}
-      {step==="orient_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Orientation</div>
-        <div style={{marginBottom:"16px"}}><div style={{fontSize:"15px",fontWeight:600,marginBottom:"8px"}}>What month is it?</div><Toggle value={sc.orient[0]} onChange={v=>setA("orient",0,v)}/></div>
-        <div style={{marginBottom:"16px"}}><div style={{fontSize:"15px",fontWeight:600,marginBottom:"8px"}}>What is today's date?</div><div style={S.note}>2 = exact, 1 = within 3 days, 0 = all else</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.orient[1]===v)} onClick={()=>setA("orient",1,v)}>{v===2?"Exact":v===1?"± 3 days":"Off"}</button>)}</div></div>
-        <div><div style={{fontSize:"15px",fontWeight:600,marginBottom:"8px"}}>What year is it?</div><Toggle value={sc.orient[2]} onChange={v=>setA("orient",2,v)}/></div></div>}
-
-      {step==="naming_pt"&&<div style={S.card}>
-        <div style={{padding:"20px",background:"#F8FAFB",borderRadius:"12px",marginBottom:"20px"}}><div style={{fontSize:"120px",textAlign:"center",lineHeight:1.1,padding:"16px 0"}}>🦛</div><div style={{textAlign:"center",fontSize:"14px",color:"#90A4AE",marginTop:"8px"}}>Name this animal</div></div>
-        <div style={{padding:"20px",background:"#F8FAFB",borderRadius:"12px"}}><div style={{fontSize:"120px",textAlign:"center",lineHeight:1.1,padding:"16px 0"}}>🎺</div><div style={{textAlign:"center",fontSize:"14px",color:"#90A4AE",marginTop:"8px"}}>Name this object</div></div></div>}
-      {step==="naming_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Naming</div>
-        <div style={{marginBottom:"16px"}}><div style={{fontSize:"15px",fontWeight:600,marginBottom:"8px"}}>🦛 Hippopotamus</div><Toggle value={sc.naming[0]} onChange={v=>setA("naming",0,v)}/></div>
-        <div><div style={{fontSize:"15px",fontWeight:600,marginBottom:"8px"}}>🎺 Trumpet</div><Toggle value={sc.naming[1]} onChange={v=>setA("naming",1,v)}/></div></div>}
-
-      {step==="abstract_pt"&&<div style={S.ptCard}><div style={S.ptText}>Your examiner will ask you a question.<br/>Please answer to the best of your ability.</div></div>}
-      {step==="abstract_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Abstraction</div><div style={S.note}>Ask: "How are a calendar and a thermometer similar?" Score: 2 = abstract (e.g., "both measure things"), 1 = concrete (e.g., "both have numbers"), 0 = all else.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.abstract===v)} onClick={()=>set("abstract",v)}>{v===2?"Abstract (2)":v===1?"Concrete (1)":"Other (0)"}</button>)}</div></div>}
-
-      {step==="calc_pt"&&<div style={S.ptCard}><div style={S.ptText}>Your examiner will read you some problems.<br/>Please answer to the best of your ability.</div></div>}
-      {step==="calc_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Calculations</div>
-        <div style={{marginBottom:"20px"}}><div style={{fontSize:"16px",fontWeight:600,marginBottom:"8px"}}>"You have $30 and spend $24.25. How much do you have left?"</div><Toggle value={sc.calc[0]} onChange={v=>setA("calc",0,v)}/></div>
-        <div><div style={{fontSize:"16px",fontWeight:600,marginBottom:"8px"}}>"How many quarters are in $3.00?"</div><Toggle value={sc.calc[1]} onChange={v=>setA("calc",1,v)}/></div></div>}
-
-      {step==="trails_pt"&&<div style={S.card}><div style={S.lbl}>Trail Making B</div><div style={S.desc}>Draw a line connecting the circles in alternating order: 1, A, 2, B, 3, C, and so on.</div><TrailsDraw pencilOnly={pencilOnly}/></div>}
-      {step==="trails_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Trail Making B</div><div style={S.note}>Review the drawing. Score: 2 = correct sequence with no errors, 1 = 1-2 errors, 0 = 3+ errors or unable.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.trails===v)} onClick={()=>set("trails",v)}>{v}/2</button>)}</div></div>}
-
-      {step==="cube_pt"&&<div style={S.card}><div style={S.lbl}>3D Figure Copy</div><div style={S.desc}>Copy the figure shown below as accurately as you can.</div><div style={{marginBottom:"16px"}}><svg viewBox="0 0 200 180" width="180" height="160" style={{display:"block",margin:"0 auto"}}><path d="M60 50 L140 50 L140 130 L60 130 Z" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 50 L90 25 L170 25 L140 50" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M140 50 L170 25 L170 105 L140 130" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 130 L90 105 L170 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/><path d="M90 25 L90 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/></svg></div><DrawCanvas width={360} height={300} pencilOnly={pencilOnly}/></div>}
-      {step==="cube_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - 3D Figure Copy</div>
-        <div style={{marginBottom:"16px"}}><svg viewBox="0 0 200 180" width="160" height="140" style={{display:"block",margin:"0 auto"}}><path d="M60 50 L140 50 L140 130 L60 130 Z" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 50 L90 25 L170 25 L140 50" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M140 50 L170 25 L170 105 L140 130" fill="none" stroke="#1B6B93" strokeWidth="2.5"/><path d="M60 130 L90 105 L170 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/><path d="M90 25 L90 105" fill="none" stroke="#1B6B93" strokeWidth="1.2" strokeDasharray="6 4"/></svg><div style={{textAlign:"center",fontSize:"13px",color:"#90A4AE",marginTop:"4px"}}>Reference figure shown to patient</div></div>
-        <div style={S.note}>Score: 2 = 3D form with correct parallel lines, 1 = 3D attempt but lines off, 0 = all else.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.cube===v)} onClick={()=>set("cube",v)}>{v}/2</button>)}</div></div>}
-
-      {step==="clock_pt"&&<div style={S.card}><div style={S.lbl}>Clock Drawing</div><div style={S.desc}>Draw a clock face showing all the numbers. Set the time to 10 past 11.</div><DrawCanvas width={380} height={380} pencilOnly={pencilOnly}/></div>}
-      {step==="clock_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Clock Drawing</div><div style={S.note}>4 components: clock face, all 12 numbers in order, hand positions (correct time), hand size. Score: 2 = 4/4, 1 = 3/4 (must include hands), 0 = all else.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.clock===v)} onClick={()=>set("clock",v)}>{v}/2</button>)}</div></div>}
-
-      {step==="fluency_pt"&&<div style={S.ptCard}><div style={S.ptText}>Name as many different animals as you can.<br/>Your examiner will tell you when to start and stop.</div></div>}
-      {step==="fluency_sc"&&<div style={S.card}><div style={S.badge}>Clinician Scoring - Verbal Fluency</div><div style={S.note}>Total unique animals in 60 seconds. Repetitions and non-animals don't count.</div><div style={S.tr}>{[0,1,2].map(v=><button key={v} style={S.tb(sc.fluency===v)} onClick={()=>set("fluency",v)}>{v===0?"≤ 9 (0)":v===1?"10-11 (1)":"12+ (2)"}</button>)}</div></div>}
-
-      {step==="prospect"&&<div style={S.card}><div style={{textAlign:"center",padding:"40px 20px 20px"}}><div style={{fontSize:"20px",fontWeight:600,marginBottom:"40px"}}>You have reached the end of the test.</div><DrawCanvas width={500} height={80} pencilOnly={pencilOnly}/><div style={{marginTop:"40px"}}><button style={{...S.bp,maxWidth:"320px",margin:"0 auto"}} onClick={next}>Complete Test</button></div></div></div>}
 
       {step==="handoff"&&<div>
         <div style={{...S.card,textAlign:"center",padding:"48px 32px"}}><div style={{fontSize:"64px",marginBottom:"24px"}}>✅</div><div style={{fontSize:"26px",fontWeight:700,marginBottom:"16px"}}>Thank you for completing the screening.</div><div style={{fontSize:"18px",color:"#5A6B7D",lineHeight:1.6,maxWidth:"400px",margin:"0 auto 24px"}}>Please hand the device back to your examiner now.</div></div>
