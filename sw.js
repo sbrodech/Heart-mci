@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heart-mci-v3';
+const CACHE_NAME = 'heart-mci-v4';
 const ASSETS = [
   '/Heart-mci/',
   '/Heart-mci/index.html',
