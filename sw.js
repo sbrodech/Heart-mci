@@ -1,10 +1,10 @@
-const CACHE_NAME = 'heart-stroke-v7';
+const CACHE_NAME = 'heart-mci-v6';
 const ASSETS = [
-  '/Heart-stroke/',
-  '/Heart-stroke/index.html',
-  '/Heart-stroke/manifest.json',
-  '/Heart-stroke/icon-192.png',
-  '/Heart-stroke/icon-512.png',
+  '/Heart-mci/',
+  '/Heart-mci/index.html',
+  '/Heart-mci/manifest.json',
+  '/Heart-mci/icon-192.png',
+  '/Heart-mci/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.10/babel.min.js'
@@ -24,6 +24,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // Network-first for HTML pages so updates are picked up immediately when online
   if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
     e.respondWith(
       fetch(e.request).then(resp => {
@@ -32,10 +33,11 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return resp;
-      }).catch(() => caches.match(e.request).then(r => r || caches.match('/Heart-stroke/index.html')))
+      }).catch(() => caches.match(e.request).then(r => r || caches.match('/Heart-mci/index.html')))
     );
     return;
   }
+  // Cache-first for static assets (icons, JS libs)
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
       if (resp.ok && e.request.method === 'GET') {
@@ -43,6 +45,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
       }
       return resp;
-    }).catch(() => caches.match('/Heart-stroke/index.html')))
+    }).catch(() => caches.match('/Heart-mci/index.html')))
   );
 });
